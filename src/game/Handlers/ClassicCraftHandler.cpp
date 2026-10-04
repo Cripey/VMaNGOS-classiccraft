@@ -564,6 +564,29 @@ void WorldSession::HandleCCHitOpcode(WorldPackets::ClassicCraft::Hit const& pack
 
     damage = std::min(damage, target->GetMaxHealth());
     bool crit = (flags & ClassicCraft::HIT_CRIT) != 0;
+    uint32 school = (flags >> ClassicCraft::HIT_SCHOOL_SHIFT) & 0x7;
+    if (school > SPELL_SCHOOL_NORMAL && school < MAX_SPELL_SCHOOL)
+    {
+        // A spell school (2026-10-04): WoW's resistances, absorbs and immunities apply, logged as a
+        // spell hit (periodic for a damage-over-time tick); frost Chills the target.
+        SpellSchoolMask mask = SpellSchoolMask(1 << school);
+        bool periodic = (flags & ClassicCraft::HIT_PERIODIC) != 0;
+        if (target->IsImmuneToSchoolMask(mask))
+        {
+            attacker->SendSpellMiss(target, ClassicCraft::HIT_SCHOOL_SPELL, SPELL_MISS_IMMUNE);
+            return;
+        }
+        uint32 absorb = 0;
+        int32 resist = 0;
+        target->CalculateDamageAbsorbAndResist(attacker, mask, periodic ? DOT : SPELL_DIRECT_DAMAGE, damage, &absorb, &resist);
+        uint32 dealt = damage > absorb + uint32(std::max(resist, 0)) ? damage - absorb - uint32(std::max(resist, 0)) : 0;
+        attacker->SendSpellNonMeleeDamageLog(target, ClassicCraft::HIT_SCHOOL_SPELL, dealt, mask, absorb, resist, periodic, 0, crit);
+        CleanDamage spellClean(dealt, BASE_ATTACK, crit ? MELEE_HIT_CRIT : MELEE_HIT_NORMAL, absorb, resist);
+        attacker->DealDamage(target, dealt, &spellClean, periodic ? DOT : SPELL_DIRECT_DAMAGE, mask, nullptr, false);
+        if ((flags & ClassicCraft::HIT_SLOW) && target->IsAlive())
+            attacker->CastSpell(target, ClassicCraft::HIT_SLOW_SPELL, true);
+        return;
+    }
     CleanDamage clean(damage, BASE_ATTACK, crit ? MELEE_HIT_CRIT : MELEE_HIT_NORMAL, 0, 0);
     uint32 hitInfo = HITINFO_AFFECTS_VICTIM | (crit ? HITINFO_CRITICALHIT : 0);
     attacker->SendAttackStateUpdate(hitInfo, target, SPELL_SCHOOL_MASK_NORMAL, damage, 0, 0, VICTIMSTATE_NORMAL, 0);

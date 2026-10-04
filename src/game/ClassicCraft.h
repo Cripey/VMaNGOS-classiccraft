@@ -67,7 +67,15 @@ namespace ClassicCraft
     {
         HIT_CRIT = 0x1,
         HIT_PROJECTILE = 0x2,
+        // Spell schools on Minecraft hits (2026-10-04): wands, staves, elemental enchantments.
+        HIT_PERIODIC = 0x4,   // a damage-over-time tick (logged as periodic)
+        HIT_SLOW = 0x8,       // frost: the target is Chilled (HIT_SLOW_SPELL)
+        HIT_SCHOOL_SHIFT = 8, // bits 8-10: SpellSchools (0 physical, 1 holy, 2 fire, 3 nature, 4 frost, 5 shadow, 6 arcane)
     };
+    // Ice Armor's Chilled: -30% movement and slower attacks for 5 s, no damage.
+    static constexpr uint32 HIT_SLOW_SPELL = 7321;
+    // The combat log names a school hit by this spell ("Shoot", the wand's own).
+    static constexpr uint32 HIT_SCHOOL_SPELL = 5019;
 
     // The proxy kind of a unit (0 if it is not a proxy).
     uint32 ProxyEntry(WorldObject const* obj);
