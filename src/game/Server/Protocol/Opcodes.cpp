@@ -950,6 +950,9 @@ Handlers BuildOpcodeList()
     DEFINE_HANDLER(CMSG_CC_WAYGATE,                   STATUS_LOGGEDIN,  PACKET_PROCESS_MAP,           &WorldSession::HandleCCWaygateOpcode);
     DEFINE_HANDLER(CMSG_CC_MINE,                      STATUS_LOGGEDIN,  PACKET_PROCESS_MAP,           &WorldSession::HandleCCMineOpcode);
     INVALID_PACKET(SMSG_CC_KILL,                      UnhandleReason::SendByServer);
+    DEFINE_HANDLER(CMSG_CC_RESPAWN,                   STATUS_LOGGEDIN,  PACKET_PROCESS_MAP,           &WorldSession::HandleCCRespawnOpcode);
+    DEFINE_HANDLER(CMSG_CC_HARVEST,                   STATUS_LOGGEDIN,  PACKET_PROCESS_MAP,           &WorldSession::HandleCCHarvestOpcode);
+    INVALID_PACKET(SMSG_CC_HARVEST,                   UnhandleReason::SendByServer);
 #endif
 
     return list;

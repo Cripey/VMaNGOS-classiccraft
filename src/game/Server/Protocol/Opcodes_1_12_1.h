@@ -836,5 +836,8 @@ enum OpcodesList
     CMSG_CC_WAYGATE                        = 835,
     CMSG_CC_MINE                           = 836,
     SMSG_CC_KILL                           = 837,
-    NUM_MSG_TYPES                          = 838
+    CMSG_CC_RESPAWN                        = 838,
+    CMSG_CC_HARVEST                        = 839,
+    SMSG_CC_HARVEST                        = 840,
+    NUM_MSG_TYPES                          = 841
 };

@@ -9,11 +9,15 @@
  *    damage from that attacker (threat, combat, loot recipient, XP and kill credit as usual).
  *  - Damage dealt TO a bridged player or a proxy never touches health here: Unit::DealDamage hands it
  *    to ForwardDamage, which sends SMSG_CC_DAMAGE to the owning client for Minecraft to apply.
- *  - CMSG_CC_DIED: Minecraft killed the player; the WoW character dies normally (ghost run).
+ *  - CMSG_CC_DIED: Minecraft killed the player; the WoW character dies too.
+ *  - CMSG_CC_RESPAWN (2026-10-04): Minecraft's Respawn is the release: the character is resurrected
+ *    at Steve's bed (a spot in the open world) or at its hearthstone location - no ghost run.
  *  - Kill XP (2026-10-02): a bridged player's kill XP is held (HoldKillXP, from Player::GiveXP) and
  *    sent as SMSG_CC_XP_DROP for Minecraft to drop as XP orbs at the corpse; picking them up claims
  *    it (CMSG_CC_XP_CLAIM), granted then through GiveXP as kill XP (rested bonus, the XP message).
  *    A ledger per player bounds the claims; unclaimed XP ends with the session.
+ *  - Ore veins (2026-10-04): CMSG_CC_HARVEST / SMSG_CC_HARVEST - a vein mined with a Minecraft pickaxe
+ *    (no Mining skill, no WoW loot), Minecraft drops the ore.
  *  - Kill loot (2026-10-03): SMSG_CC_KILL (OnKillLoot) - guid victim, u32 entry, f32 x, y, z, u32 level,
  *    rank, creature type, family, money (copper on the corpse), KillFlags, quest items put in the bags.
  */
@@ -188,6 +192,31 @@ namespace WorldPackets { namespace ClassicCraft
     public:
         uint8 down = 0;
         Mine() : ClientPacket(CMSG_CC_MINE) {}
+        void ReadFromWorldPacket(WorldPacket& recv) override;
+    };
+
+    // CMSG_CC_RESPAWN: Steve respawned after a death (2026-10-04): u32 kind (RESPAWN_HOME = the
+    // hearthstone location, RESPAWN_AT = the spot given: his bed), u32 map, f32 x, y, z, o.
+    class Respawn final : public ClientPacket
+    {
+    public:
+        enum Kind : uint32 { RESPAWN_HOME = 0, RESPAWN_AT = 1 };
+        uint32 kind = RESPAWN_HOME;
+        uint32 map = 0;
+        float x = 0.0f, y = 0.0f, z = 0.0f, o = 0.0f;
+        Respawn() : ClientPacket(CMSG_CC_RESPAWN) {}
+        void ReadFromWorldPacket(WorldPacket& recv) override;
+    };
+
+    // CMSG_CC_HARVEST: Steve mined a WoW ore vein with a Minecraft pickaxe or gathered a herb (2026-10-04): u64 the node.
+    // Counts as one of the vein's uses (WoW's own min/max opens) and gives no WoW loot; the reply
+    // SMSG_CC_HARVEST (u64 vein, u32 entry, f32 x, y, z, u8 ok, u8 depleted) lets Minecraft drop ore.
+    // Treasure chests too (2026-10-04): opened once, consumed (depleted), Minecraft fills a chest screen.
+    class Harvest final : public ClientPacket
+    {
+    public:
+        uint64 guid = 0;
+        Harvest() : ClientPacket(CMSG_CC_HARVEST) {}
         void ReadFromWorldPacket(WorldPacket& recv) override;
     };
 }}

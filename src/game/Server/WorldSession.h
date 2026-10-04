@@ -559,6 +559,8 @@ class WorldSession
         void HandleCCXpClaimOpcode(WorldPackets::ClassicCraft::XpClaim const& packet);
         void HandleCCWaygateOpcode(WorldPackets::ClassicCraft::Waygate const& packet);
         void HandleCCMineOpcode(WorldPackets::ClassicCraft::Mine const& packet);
+        void HandleCCRespawnOpcode(WorldPackets::ClassicCraft::Respawn const& packet);
+        void HandleCCHarvestOpcode(WorldPackets::ClassicCraft::Harvest const& packet);
         void HandleSetMouseOverTargetOpcode(WorldPackets::Misc::SetTarget const& packet);
         void HandleStandStateChangeOpcode(WorldPackets::Misc::StandStateChange const& packet);
         void HandleEmoteOpcode(WorldPackets::Misc::Emote const& packet);

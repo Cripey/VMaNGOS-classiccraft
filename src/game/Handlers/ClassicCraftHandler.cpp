@@ -22,6 +22,8 @@
 #include "LootMgr.h"
 #include "Bag.h"
 #include "ObjectMgr.h"
+#include "GameObject.h"
+#include "World.h"
 
 #include <mutex>
 #include <unordered_map>
@@ -759,4 +761,112 @@ void WorldSession::HandleCCMineOpcode(WorldPackets::ClassicCraft::Mine const& pa
         return;
     sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "[classiccraft] %s: %s a mine", player->GetName(), packet.down ? "down" : "up from");
     ClassicCraft::SetDownMine(player, packet.down != 0);
+}
+
+void WorldPackets::ClassicCraft::Respawn::ReadFromWorldPacket(WorldPacket& recv)
+{
+    recv >> kind >> map >> x >> y >> z >> o;
+}
+
+// Minecraft's Respawn after a death (user, 2026-10-04): the character comes back to life where Steve
+// respawns - his bed when it is in the open world, else the hearthstone location (Steve is placed
+// there after the teleport). Full health (Minecraft owns it anyway), no resurrection sickness, no
+// ghost run; the corpse turns to bones.
+void WorldSession::HandleCCRespawnOpcode(WorldPackets::ClassicCraft::Respawn const& packet)
+{
+    // No IsBridged check: the client turns Minecraft combat off while the character is dead.
+    Player* player = GetPlayer();
+    if (!player || !player->IsInWorld())
+        return;
+    if (!player->IsAlive())
+    {
+        player->ResurrectPlayer(1.0f, false);
+        player->SpawnCorpseBones();
+    }
+    MapEntry const* dest = packet.kind == WorldPackets::ClassicCraft::Respawn::RESPAWN_AT
+        ? sMapStorage.LookupEntry<MapEntry>(packet.map) : nullptr;
+    if (dest && !dest->Instanceable() && MaNGOS::IsValidMapCoord(packet.x, packet.y, packet.z, packet.o))
+    {
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "[classiccraft] %s: respawned at the bed, map %u (%.1f, %.1f, %.1f)",
+            player->GetName(), packet.map, packet.x, packet.y, packet.z);
+        player->TeleportTo(packet.map, packet.x, packet.y, packet.z, packet.o);
+    }
+    else
+    {
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "[classiccraft] %s: respawned at the hearthstone location", player->GetName());
+        player->TeleportToHomebind(0, false);
+    }
+}
+
+void WorldPackets::ClassicCraft::Harvest::ReadFromWorldPacket(WorldPacket& recv)
+{
+    recv >> guid;
+}
+
+// A WoW ore vein mined with a Minecraft pickaxe (user, 2026-10-04: the real WoW nodes, mined like
+// Minecraft ore, next to the ores under the ground), or a herb gathered (the same, Herbalism's lock).
+// No Mining or Herbalism skill and no WoW loot: the node loses
+// one use as if it had been looted (LootHandler's vein rule, skill bonus 0) and despawns for its
+// respawn timer when used up; the reply tells Minecraft to drop the ore.
+void WorldSession::HandleCCHarvestOpcode(WorldPackets::ClassicCraft::Harvest const& packet)
+{
+    Player* player = GetPlayer();
+    if (!player || !player->IsInWorld() || !player->IsAlive() || !ClassicCraft::IsBridged(player))
+        return;
+    GameObject* go = player->GetMap()->GetGameObject(ObjectGuid(packet.guid));
+    bool ok = false, depleted = false, treasure = false;
+    if (go && go->isSpawned() && go->GetGoType() == GAMEOBJECT_TYPE_CHEST && go->getLootState() == GO_READY
+        && go->IsWithinDistInMap(player, 10.0f))
+    {
+        LockEntry const* lock = sLockStore.LookupEntry(go->GetGOInfo()->chest.lockId);
+        for (int i = 0; lock && i < MAX_LOCK_CASE && !ok; ++i)
+            ok = lock->Type[i] == LOCK_KEY_SKILL
+                && (lock->Index[i] == LOCKTYPE_MINING || lock->Index[i] == LOCKTYPE_HERBALISM);
+        // Treasure chests (2026-10-04): WoW's Treasure lock case, open world, no quest loot (quest
+        // objects share the lock) - opened once, no Lockpicking, Minecraft fills a chest instead.
+        for (int i = 0; lock && i < MAX_LOCK_CASE && !ok && !treasure; ++i)
+            treasure = lock->Type[i] == LOCK_KEY_SKILL && lock->Index[i] == LOCKTYPE_TREASURE;
+        treasure = treasure && player->GetMap()->IsContinent() && go->GetGOInfo()->chest.questId == 0
+            && !LootTemplates_Gameobject.HaveQuestLootFor(go->GetGOInfo()->chest.lootId);
+    }
+    if (treasure)
+    {
+        ok = depleted = true;
+        go->SetLootState(GO_JUST_DEACTIVATED);
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "[classiccraft] %s: opened treasure %u (%s)", player->GetName(),
+            go->GetEntry(), go->GetGOInfo()->name);
+    }
+    else if (ok)
+    {
+        uint32 const goMin = go->GetGOInfo()->chest.minSuccessOpens;
+        uint32 const goMax = go->GetGOInfo()->chest.maxSuccessOpens;
+        depleted = true;
+        if (goMin != 0 && goMax > goMin)
+        {
+            float const rate = sWorld.getConfig(CONFIG_FLOAT_RATE_MINING_AMOUNT);
+            go->AddUse();
+            float const uses = float(go->GetUseCount());
+            if (uses < goMax * rate)
+            {
+                if (uses < goMin * rate)
+                    depleted = false;
+                else
+                {
+                    double const chance = pow(0.8 * sWorld.getConfig(CONFIG_FLOAT_RATE_MINING_NEXT),
+                        4 * (1 / double(goMax * rate)) * double(uses));
+                    depleted = !roll_chance_f(float(100.0f * chance));
+                }
+            }
+        }
+        go->SetLootState(depleted ? GO_JUST_DEACTIVATED : GO_READY);
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "[classiccraft] %s: harvested node %u (%s)%s", player->GetName(),
+            go->GetEntry(), go->GetGOInfo()->name, depleted ? ", used up" : "");
+    }
+    WorldPacket data(SMSG_CC_HARVEST, 8 + 4 + 4 * 3 + 2);
+    data << packet.guid;
+    data << uint32(go ? go->GetEntry() : 0);
+    data << float(go ? go->GetPositionX() : 0.0f) << float(go ? go->GetPositionY() : 0.0f)
+         << float(go ? go->GetPositionZ() : 0.0f);
+    data << uint8(ok) << uint8(depleted);
+    SendPacket(&data);
 }
