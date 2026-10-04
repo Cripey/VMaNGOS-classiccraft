@@ -34,6 +34,7 @@
 #include "CreatureAIRegistry.h"
 #include "WaypointMovementGenerator.h"
 #include "CyclicMovementGenerator.h"
+#include "ClassicCraft.h" // classiccraft (fork only)
 
 namespace AIRegistry
 {
@@ -48,6 +49,7 @@ void Initialize()
     (new CreatureAIFactory<CreatureEventAI>("EventAI"))->RegisterSelf();
     (new CreatureAIFactory<PetEventAI>("PetEventAI"))->RegisterSelf();
     (new CreatureAIFactory<GuardEventAI>("GuardEventAI"))->RegisterSelf();
+    ClassicCraft::RegisterProxyAI(); // classiccraft (fork only)
 
 
     (new MovementGeneratorFactory<RandomMovementGenerator>(RANDOM_MOTION_TYPE))->RegisterSelf();

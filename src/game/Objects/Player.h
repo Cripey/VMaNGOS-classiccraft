@@ -1986,7 +1986,7 @@ class Player final: public Unit
 
         void BuildCreateUpdateBlockForPlayer(UpdateData& data, Player* target) const override;
         void DestroyForPlayer(Player const* target) const override;
-        void SendLogXPGain(uint32 givenXP, Unit const* victim, uint32 restXP) const;
+        void SendLogXPGain(uint32 givenXP, ObjectGuid victimGuid, uint32 restXP) const; // classiccraft: a guid (was Unit const*)
 
         void SendMessageToSet(std::unique_ptr<ServerPacket const> packet, bool self) const override;
         void SendMessageToSet(WorldPacket* data, bool self) const override;

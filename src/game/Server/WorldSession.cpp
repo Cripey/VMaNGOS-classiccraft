@@ -682,6 +682,9 @@ void WorldSession::LogoutPlayer(bool Save)
 
     if (_player)
     {
+        // classiccraft (fork only): Minecraft combat ends with the session.
+        ClassicCraft::SetBridged(_player, false);
+        ClassicCraft::ClearXpDrops(_player); // unclaimed orbs' XP ends with the session
         bool inWorld = _player->IsInWorld() && _player->FindMap();
 
         sLog.Player(this, LOG_CHAR, "Logout", LOG_LVL_DETAIL, "");

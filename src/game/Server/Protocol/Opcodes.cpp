@@ -939,6 +939,17 @@ Handlers BuildOpcodeList()
     INVALID_PACKET(SMSG_CHARACTER_PROFILE,            UnhandleReason::SendByServer);
     INVALID_PACKET(SMSG_CHARACTER_PROFILE_REALM_CONNECTED, UnhandleReason::SendByServer);
     INVALID_PACKET(SMSG_DEFENSE_MESSAGE,              UnhandleReason::SendByServer);
+    // classiccraft (fork only)
+    DEFINE_HANDLER(CMSG_CC_HELLO,                     STATUS_LOGGEDIN,  PACKET_PROCESS_MAP,           &WorldSession::HandleCCHelloOpcode);
+    DEFINE_HANDLER(CMSG_CC_HIT,                       STATUS_LOGGEDIN,  PACKET_PROCESS_MAP,           &WorldSession::HandleCCHitOpcode);
+    DEFINE_HANDLER(CMSG_CC_ACTORS,                    STATUS_LOGGEDIN,  PACKET_PROCESS_MAP,           &WorldSession::HandleCCActorsOpcode);
+    DEFINE_HANDLER(CMSG_CC_DIED,                      STATUS_LOGGEDIN,  PACKET_PROCESS_MAP,           &WorldSession::HandleCCDiedOpcode);
+    INVALID_PACKET(SMSG_CC_DAMAGE,                    UnhandleReason::SendByServer);
+    INVALID_PACKET(SMSG_CC_XP_DROP,                   UnhandleReason::SendByServer);
+    DEFINE_HANDLER(CMSG_CC_XP_CLAIM,                  STATUS_LOGGEDIN,  PACKET_PROCESS_MAP,           &WorldSession::HandleCCXpClaimOpcode);
+    DEFINE_HANDLER(CMSG_CC_WAYGATE,                   STATUS_LOGGEDIN,  PACKET_PROCESS_MAP,           &WorldSession::HandleCCWaygateOpcode);
+    DEFINE_HANDLER(CMSG_CC_MINE,                      STATUS_LOGGEDIN,  PACKET_PROCESS_MAP,           &WorldSession::HandleCCMineOpcode);
+    INVALID_PACKET(SMSG_CC_KILL,                      UnhandleReason::SendByServer);
 #endif
 
     return list;

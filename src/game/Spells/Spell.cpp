@@ -48,6 +48,7 @@
 #include "Geometry.h"
 #include "Anticheat.h"
 #include "Utilities/Random.h"
+#include "ClassicCraft.h" // classiccraft (fork only)
 
 using namespace Spells;
 
@@ -3434,6 +3435,21 @@ SpellCastResult Spell::prepare(Aura* triggeredByAura, uint32 chance)
         if (Player* pPlayerCaster = m_caster->ToPlayer())
             if (pPlayerCaster->HasCheatOption(PLAYER_CHEAT_NO_CAST_TIME))
                 m_casttime = 0;
+
+        // classiccraft: a Minecraft-driven player opens objects (quest crates, cactus apples) at
+        // once - the Minecraft side's own hold, sped by the right tool, is the timer (2026-10-03).
+        // Not the profession locks (lockpicking, herbs, mining, traps) nor fishing.
+        if (m_casttime && ClassicCraft::IsBridged(m_casterUnit) && m_spellInfo->HasEffect(SPELL_EFFECT_OPEN_LOCK))
+        {
+            for (uint32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+            {
+                if (m_spellInfo->Effect[i] != SPELL_EFFECT_OPEN_LOCK)
+                    continue;
+                int32 lock = m_spellInfo->EffectMiscValue[i];
+                if (lock >= LOCKTYPE_OPEN && lock != LOCKTYPE_ARM_TRAP && lock != LOCKTYPE_FISHING)
+                    m_casttime = 0;
+            }
+        }
 
         m_duration = m_spellInfo->CalculateDuration(m_caster);
 

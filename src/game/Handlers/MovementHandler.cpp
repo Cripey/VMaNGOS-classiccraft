@@ -19,6 +19,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "ClassicCraft.h" // classiccraft (fork only)
 #include "Common.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
@@ -1112,8 +1113,15 @@ void WorldSession::HandleMoverRelocation(Unit* pMover, MovementInfo& movementInf
 
         pPlayerMover->SetPosition(pMover->m_movementInfo.GetPos().x, pMover->m_movementInfo.GetPos().y, pMover->m_movementInfo.GetPos().z, pMover->m_movementInfo.GetPos().o);
 
+        // classiccraft (fork only): a bridged player's body is Minecraft's - it digs under WoW's
+        // ground and Minecraft has its own void (whose death kills the WoW character too), so
+        // neither undermap rescue applies; a teleport here only yanked Steve back.
+        bool const ccBridged = ClassicCraft::IsBridged(pPlayerMover);
+
         // Nostalrius - antiundermap1
-        if (pMover->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLINGFAR))
+        if (ccBridged)
+            ;
+        else if (pMover->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLINGFAR))
         {
             float hauteur = pPlayerMover->GetMap()->GetHeight(pPlayerMover->GetPositionX(), pPlayerMover->GetPositionY(), pPlayerMover->GetPositionZ(), true);
             bool undermap = false;
@@ -1131,7 +1139,7 @@ void WorldSession::HandleMoverRelocation(Unit* pMover, MovementInfo& movementInf
             pPlayerMover->SaveNoUndermapPosition(pMover->m_movementInfo.GetPos().x, pMover->m_movementInfo.GetPos().y, pMover->m_movementInfo.GetPos().z + 3.0f, pMover->m_movementInfo.GetPos().o);
 
         // Antiundermap2: teleport to graveyard
-        if (pMover->m_movementInfo.GetPos().z < -500.0f && !pPlayerMover->IsGameMaster())
+        if (pMover->m_movementInfo.GetPos().z < -500.0f && !pPlayerMover->IsGameMaster() && !ccBridged)
         {
             // NOTE: this is actually called many times while falling
             // even after the player has been teleported away

@@ -19,6 +19,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "ClassicCraft.h" // classiccraft (fork only)
 #include "Object.h"
 #include "SharedDefines.h"
 #include "WorldPacket.h"
@@ -3615,6 +3616,13 @@ ReputationRank WorldObject::GetReactionTo(WorldObject const* target) const
     if (IsUnit() && target->IsUnit() &&
         static_cast<Unit const*>(this)->GetCharmerOrOwnerOrOwnGuid() == static_cast<Unit const*>(target)->GetCharmerOrOwnerOrOwnGuid())
         return REP_FRIENDLY;
+
+    // classiccraft (fork only): Minecraft mob proxies' reactions (ClassicCraft::ReactionOverride).
+    {
+        ReputationRank ccRank;
+        if (ClassicCraft::ReactionOverride(this, target, ccRank))
+            return ccRank;
+    }
 
     Player const* selfPlayerOwner = GetAffectingPlayer();
     Player const* targetPlayerOwner = target->GetAffectingPlayer();

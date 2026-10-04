@@ -16,6 +16,7 @@
 
 #include "ObjectMgr.h"
 #include "SpellCaster.h"
+#include "ClassicCraft.h" // classiccraft (fork only)
 #include "DynamicObject.h"
 #include "GameObject.h"
 #include "Totem.h"
@@ -1120,6 +1121,9 @@ SpellSchoolMask SpellCaster::GetMeleeDamageSchoolMask() const
 
 float SpellCaster::CalcArmorReducedDamage(Unit const* pVictim, uint32 const damage) const
 {
+    // classiccraft: a Minecraft player's hits are mitigated by Minecraft armor, not WoW's.
+    if (ClassicCraft::IsBridged(pVictim))
+        return float(damage);
     uint32 newdamage = 0;
     float armor = (float)pVictim->GetArmor();
     Unit const* pUnit = ToUnit();

@@ -19,6 +19,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "ClassicCraft.h" // classiccraft (fork only)
 #include <unordered_map>
 #include <cmath>
 #include <sstream>
@@ -2209,6 +2210,8 @@ void Player::RemoveFromWorld()
 
     if (IsInWorld())
     {
+        // classiccraft (fork only): the Minecraft mob proxies stay on the map being left.
+        ClassicCraft::RemoveAllProxies(this);
         // Release charmed creatures, unsummon totems and remove pets/guardians
         UnsummonAllTotems();
         RemoveMiniPet();
@@ -2991,13 +2994,13 @@ uint32 Player::GetWhoListPartyStatus() const
 }
 #endif
 
-void Player::SendLogXPGain(uint32 givenXP, Unit const* victim, uint32 restXP) const
+void Player::SendLogXPGain(uint32 givenXP, ObjectGuid victimGuid, uint32 restXP) const
 {
     auto packet = std::make_unique<WorldPackets::Misc::LogXpGain>();
-    packet->victimGuid = victim ? victim->GetObjectGuid() : ObjectGuid();
+    packet->victimGuid = victimGuid;
     packet->totalXp = givenXP + restXP;
-    packet->xpType = victim ? 0 : 1; // 00-kill_xp type, 01-non_kill_xp type
-    if (victim)
+    packet->xpType = !victimGuid.IsEmpty() ? 0 : 1; // 00-kill_xp type, 01-non_kill_xp type
+    if (!victimGuid.IsEmpty())
     {
         packet->baseXp = givenXP;    // experience without rested bonus
         packet->groupBonus = 1.0f;   // 1=none 0=100% group bonus output
@@ -3007,6 +3010,10 @@ void Player::SendLogXPGain(uint32 givenXP, Unit const* victim, uint32 restXP) co
 
 void Player::GiveXP(uint32 xp, Unit const* victim)
 {
+    // classiccraft (fork only): a bridged player's kill XP waits in Minecraft's XP orbs.
+    if (victim && ClassicCraft::HoldKillXP(this, xp, victim))
+        return;
+
 #if SUPPORTED_CLIENT_BUILD > CLIENT_BUILD_1_7_1
     if (HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_NO_PLAY_TIME))
         return;
@@ -3034,9 +3041,11 @@ void Player::GiveXP(uint32 xp, Unit const* victim)
         return;
 
     // XP resting bonus for kill
-    uint32 restedBonusXP = victim ? GetXPRestBonus(xp) : 0;
+    // classiccraft (fork only): a claimed orb's kill XP is kill XP too, its corpse maybe gone.
+    ObjectGuid victimGuid = victim ? victim->GetObjectGuid() : ClassicCraft::ClaimedKill();
+    uint32 restedBonusXP = !victimGuid.IsEmpty() ? GetXPRestBonus(xp) : 0;
 
-    SendLogXPGain(xp, victim, restedBonusXP);
+    SendLogXPGain(xp, victimGuid, restedBonusXP);
 
     uint32 curXP = GetUInt32Value(PLAYER_XP);
     uint32 nextLvlXP = GetUInt32Value(PLAYER_NEXT_LEVEL_XP);
@@ -12744,6 +12753,10 @@ bool Player::CanRewardQuest(Quest const* pQuest, uint32 reward, bool msg) const
     if (!CanRewardQuest(pQuest, msg))
         return false;
 
+    // classiccraft: a Minecraft player gets no WoW reward items, so needs no bag space for them.
+    if (ClassicCraft::IsBridged(this))
+        return true;
+
     uint32 numRewardedItems = 0;
     if (pQuest->GetRewChoiceItemsCount() > 0)
     {
@@ -13094,7 +13107,9 @@ void Player::RewardQuest(Quest const* pQuest, uint32 reward, WorldObject* questE
         if ((bg->GetTypeID() == BATTLEGROUND_AV) && (questEnder->GetTypeId() == TYPEID_UNIT))
             ((BattleGroundAV*)bg)->HandleQuestComplete(questEnder->ToUnit(), pQuest->GetQuestId(), this);
 
-    if (pQuest->GetRewChoiceItemsCount() > 0)
+    // classiccraft: a Minecraft player's rewards are Minecraft items (McwowQuestRewards), not WoW's.
+    bool const ccBridged = ClassicCraft::IsBridged(this);
+    if (!ccBridged && pQuest->GetRewChoiceItemsCount() > 0)
     {
         if (uint32 itemId = pQuest->RewChoiceItemId[reward])
         {
@@ -13107,7 +13122,7 @@ void Player::RewardQuest(Quest const* pQuest, uint32 reward, WorldObject* questE
         }
     }
 
-    if (pQuest->GetRewItemsCount() > 0)
+    if (!ccBridged && pQuest->GetRewItemsCount() > 0)
     {
         for (uint32 i = 0; i < pQuest->GetRewItemsCount(); ++i)
         {
@@ -13138,10 +13153,15 @@ void Player::RewardQuest(Quest const* pQuest, uint32 reward, WorldObject* questE
     if (GetLevel() < sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL))
         GiveXP(xp , nullptr);
     else if (int32 money = pQuest->GetRewMoneyMaxLevelAtComplete())
-        LogModifyMoney(money, "QuestMaxLevel", questEnder->GetObjectGuid(), questId);
+    {
+        if (!ccBridged) // classiccraft: emeralds instead
+            LogModifyMoney(money, "QuestMaxLevel", questEnder->GetObjectGuid(), questId);
+    }
 
     // Give player extra money if GetRewOrReqMoney > 0 and get ReqMoney if negative
-    LogModifyMoney(pQuest->GetRewOrReqMoney(), "Quest", questEnder->GetObjectGuid(), questId);
+    // classiccraft: a Minecraft player's reward money becomes emeralds (McwowQuestRewards).
+    if (!ccBridged || pQuest->GetRewOrReqMoney() < 0)
+        LogModifyMoney(pQuest->GetRewOrReqMoney(), "Quest", questEnder->GetObjectGuid(), questId);
 
     // Send reward mail
     if (int32 mail_template_id = pQuest->GetRewMailTemplateId())

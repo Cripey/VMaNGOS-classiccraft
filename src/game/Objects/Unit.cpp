@@ -18,6 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "ClassicCraft.h" // classiccraft (fork only)
 #include "Unit.h"
 #include "Creature.h"
 #include "Pet.h"
@@ -822,6 +823,11 @@ uint32 Unit::DealDamage(Unit* pVictim, uint32 damage, CleanDamage const* cleanDa
         }
     }
 
+    // classiccraft (fork only): a bridged player's or a Minecraft proxy's health is Minecraft's; the
+    // hit goes to its client instead (combat, threat and loot tagging above still happened).
+    if (ClassicCraft::ForwardDamage(this, pVictim, damage, cleanDamage, damageSchoolMask))
+        return damage;
+
     if (health <= damage && pVictim->GetInvincibilityHpThreshold() == 0)
     {
         DEBUG_FILTER_LOG(LOG_FILTER_DAMAGE, "DealDamage: victim just died");
@@ -851,7 +857,9 @@ uint32 Unit::DealDamage(Unit* pVictim, uint32 damage, CleanDamage const* cleanDa
 
         if (damagetype != DOT && damagetype != SELF_DAMAGE)
         {
-            if (!GetVictim() && IsPlayer())
+            // classiccraft (fork only): a bridged player's fighting is Minecraft's; WoW's own
+            // auto-attack would swing the WoW weapon on top of it.
+            if (!GetVictim() && IsPlayer() && !ClassicCraft::IsBridged(this))
             {
                 // if not have main target then attack state with target (including AI call)
                 // start melee attacks only after melee hit
@@ -979,6 +987,7 @@ void Unit::Kill(Unit* pVictim, SpellEntry const* spellProto, bool durabilityLoss
     // find player: owner of controlled `this` or `this` itself maybe
     // for loot will be sued only if pGroupTap == nullptr
     Player* pPlayerTap = GetCharmerOrOwnerPlayerOrPlayerItself();
+    bool ccLootCleared = false; // classiccraft: a Minecraft player's kill leaves no WoW loot
     Creature* pCreatureVictim = pVictim->ToCreature();
     Player* pPlayerVictim = pVictim->ToPlayer();
     Group* pGroupTap = nullptr;
@@ -1089,6 +1098,7 @@ void Unit::Kill(Unit* pVictim, SpellEntry const* spellProto, bool durabilityLoss
                 pCreatureVictim->GeneratePlayerDependentLoot(looter, pGroupTap);
             else
                 pCreatureVictim->GenerateLootForBody(looter, pGroupTap);
+            ccLootCleared = ClassicCraft::OnKillLoot(looter, pCreatureVictim); // classiccraft: Minecraft loot, quest items to bags
         }
 
         if (pGroupTap)
@@ -1213,7 +1223,7 @@ void Unit::Kill(Unit* pVictim, SpellEntry const* spellProto, bool durabilityLoss
 
             pCreatureVictim->DeleteThreatList();
             if (CreatureInfo const* cinfo = pCreatureVictim->GetCreatureInfo())
-                if (cinfo->loot_id || cinfo->gold_max > 0)
+                if (!ccLootCleared && (cinfo->loot_id || cinfo->gold_max > 0))
                     pCreatureVictim->SetFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
 
             if (pPlayerTap && (pCreatureVictim->IsGuard() || pCreatureVictim->HasStaticFlag(CREATURE_STATIC_FLAG_PVP_ENABLING)))

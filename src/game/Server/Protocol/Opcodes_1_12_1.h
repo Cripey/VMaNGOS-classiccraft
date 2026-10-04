@@ -825,5 +825,16 @@ enum OpcodesList
     SMSG_CHARACTER_PROFILE                 = 824,
     SMSG_CHARACTER_PROFILE_REALM_CONNECTED = 825,
     SMSG_DEFENSE_MESSAGE                   = 827,
-    NUM_MSG_TYPES                          = 828
+    // classiccraft (fork only): Minecraft <-> WoW combat crossover, see ClassicCraft.h.
+    CMSG_CC_HELLO                          = 828,
+    CMSG_CC_HIT                            = 829,
+    CMSG_CC_ACTORS                         = 830,
+    CMSG_CC_DIED                           = 831,
+    SMSG_CC_DAMAGE                         = 832,
+    SMSG_CC_XP_DROP                        = 833,
+    CMSG_CC_XP_CLAIM                       = 834,
+    CMSG_CC_WAYGATE                        = 835,
+    CMSG_CC_MINE                           = 836,
+    SMSG_CC_KILL                           = 837,
+    NUM_MSG_TYPES                          = 838
 };

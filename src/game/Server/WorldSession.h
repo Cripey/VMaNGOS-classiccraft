@@ -37,6 +37,7 @@
 #include "UpdateData.h"
 #include "LockedQueue.h"
 #include "Packets/AuctionHouse.h"
+#include "ClassicCraft.h" // classiccraft (fork only)
 #include "Packets/Battleground.h"
 #include "Packets/Channel.h"
 #include "Packets/Character.h"
@@ -550,6 +551,14 @@ class WorldSession
         void HandleTogglePvP(WorldPackets::Misc::TogglePvP const& packet);
         void HandleZoneUpdateOpcode(WorldPackets::Misc::ZoneUpdate const& packet);
         void HandleSetSelectionOpcode(WorldPackets::Misc::SetSelection const& packet);
+        // classiccraft (fork only): Minecraft <-> WoW combat crossover (ClassicCraft.h).
+        void HandleCCHelloOpcode(WorldPackets::ClassicCraft::Hello const& packet);
+        void HandleCCHitOpcode(WorldPackets::ClassicCraft::Hit const& packet);
+        void HandleCCActorsOpcode(WorldPackets::ClassicCraft::Actors const& packet);
+        void HandleCCDiedOpcode(NullClientPacket const& packet);
+        void HandleCCXpClaimOpcode(WorldPackets::ClassicCraft::XpClaim const& packet);
+        void HandleCCWaygateOpcode(WorldPackets::ClassicCraft::Waygate const& packet);
+        void HandleCCMineOpcode(WorldPackets::ClassicCraft::Mine const& packet);
         void HandleSetMouseOverTargetOpcode(WorldPackets::Misc::SetTarget const& packet);
         void HandleStandStateChangeOpcode(WorldPackets::Misc::StandStateChange const& packet);
         void HandleEmoteOpcode(WorldPackets::Misc::Emote const& packet);
