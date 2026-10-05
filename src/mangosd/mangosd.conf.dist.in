@@ -1406,6 +1406,18 @@ AllowTwoSide.WhoList = 0
 AllowTwoSide.AddFriend = 0
 
 ###################################################################################################################
+# CLASSICCRAFT (fork only)
+#
+#    ClassicCraft.NeutralRace
+#        Every character is the neutral Minecraft race: friendly to Alliance and Horde (faction template 990,
+#        sql/custom/classiccraft_neutral.sql), both factions' quests, friendly start reputation everywhere,
+#        all player languages, no racial abilities, one team for groups/guilds/chat.
+#        Default: 1 (Neutral)
+#                 0 (Stock races and factions)
+
+ClassicCraft.NeutralRace = 1
+
+###################################################################################################################
 # CREATURE AND GAMEOBJECT SETTINGS
 #
 #    ThreatRadius

@@ -107,6 +107,7 @@ set (game_SRCS
     Handlers/CharacterHandler.cpp
     Handlers/ChatHandler.cpp
     Handlers/ClassicCraftHandler.cpp
+    ClassicCraftNeutral.cpp
     Handlers/CombatHandler.cpp
     Handlers/DuelHandler.cpp
     Handlers/GMTicketHandler.cpp

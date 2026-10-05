@@ -6212,6 +6212,11 @@ void Player::CheckAreaExploreAndOutdoor()
 
 Team Player::TeamForRace(uint8 race)
 {
+    // classiccraft (fork only): the neutral Minecraft race - one team for everyone (groups, guilds,
+    // friends, mail, character creation on a PvP realm).
+    if (ClassicCraft::NeutralRaceOn())
+        return ALLIANCE;
+
     ChrRacesEntry const* rEntry = sChrRacesStore.LookupEntry(race);
     if (!rEntry)
     {
@@ -6245,6 +6250,14 @@ uint32 Player::GetFactionForRace(uint8 race)
 
 void Player::SetFactionForRace(uint8 race)
 {
+    // classiccraft (fork only): the neutral Minecraft race - one team, a faction template friendly
+    // to Alliance and Horde (ClassicCraftNeutral.cpp).
+    if (ClassicCraft::NeutralRaceOn())
+    {
+        m_team = ALLIANCE;
+        SetFactionTemplateId(ClassicCraft::NEUTRAL_FACTION_TEMPLATE);
+        return;
+    }
     m_team = TeamForRace(race);
     SetFactionTemplateId(GetFactionForRace(race));
 }
@@ -6623,11 +6636,12 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea)
     // in PvE, only opposition team capital
     switch (zoneEntry->Team)
     {
+        // classiccraft (fork only): the neutral Minecraft race is at home on both sides.
         case AREATEAM_ALLY:
-            pvpInfo.inPvPEnforcedArea = GetTeam() != ALLIANCE && (sWorld.IsPvPRealm() || zoneEntry->Flags & AREA_FLAG_CAPITAL);
+            pvpInfo.inPvPEnforcedArea = !ClassicCraft::IsNeutral(this) && GetTeam() != ALLIANCE && (sWorld.IsPvPRealm() || zoneEntry->Flags & AREA_FLAG_CAPITAL);
             break;
         case AREATEAM_HORDE:
-            pvpInfo.inPvPEnforcedArea = GetTeam() != HORDE && (sWorld.IsPvPRealm() || zoneEntry->Flags & AREA_FLAG_CAPITAL);
+            pvpInfo.inPvPEnforcedArea = !ClassicCraft::IsNeutral(this) && GetTeam() != HORDE && (sWorld.IsPvPRealm() || zoneEntry->Flags & AREA_FLAG_CAPITAL);
             break;
         case AREATEAM_NONE:
             // overwrite for battlegrounds, maybe batter some zone flags but current known not 100% fit to this
@@ -14999,6 +15013,7 @@ bool Player::LoadFromDB(ObjectGuid guid, SqlQueryHolder* holder)
     // after spell load
     InitTalentForLevel();
     LearnDefaultSpells();
+    ClassicCraft::ApplyNeutralSpells(this); // classiccraft (fork only): racials out, languages in
 
     // after spell load, learn rewarded spell if need also
     _LoadQuestStatus(holder->TakeResult(PLAYER_LOGIN_QUERY_LOADQUESTSTATUS));
@@ -19302,6 +19317,9 @@ void Player::LearnDefaultSpells()
 
     for (const auto spell : info->spell)
     {
+        // classiccraft (fork only): the neutral Minecraft race has no racial abilities.
+        if (ClassicCraft::IsNeutral(this) && ClassicCraft::IsRacialSpell(spell))
+            continue;
         sLog.Out(LOG_BASIC, LOG_LVL_DEBUG, "PLAYER (Class: %u Race: %u): Adding initial spell, id = %u", uint32(GetClass()), uint32(GetRace()), spell);
         if (!IsInWorld())                                   // will send in INITIAL_SPELLS in list anyway at map add
             AddSpell(spell, true, true, true, false);

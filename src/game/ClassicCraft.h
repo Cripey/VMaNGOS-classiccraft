@@ -39,6 +39,7 @@ class Creature;
 class WorldObject;
 class WorldPacket;
 struct CleanDamage;
+struct FactionEntry;
 
 namespace ClassicCraft
 {
@@ -125,6 +126,20 @@ namespace ClassicCraft
     void PrepareInventory(Player* player);
     // The item that fills empty bag slots: "20-slot Bag".
     constexpr uint32 QUEST_BAG = 1977;
+
+    // The neutral Minecraft race (ClassicCraftNeutral.cpp, 2026-10-05): every character, while
+    // ClassicCraft.NeutralRace is on.
+    constexpr uint32 NEUTRAL_FACTION_TEMPLATE = 990; // sql/custom/classiccraft_neutral.sql
+    bool NeutralRaceOn();
+    // A player while the neutral race is on.
+    bool IsNeutral(Unit const* unit);
+    // A neutral player's base reputation slot of a faction: the best value among its slots that
+    // fit the class (any race), -1 for none. benilla mirrors this.
+    int NeutralRepIndex(FactionEntry const* faction, uint32 classMask);
+    // A spell of a racial skill line (racial abilities and passives).
+    bool IsRacialSpell(uint32 spellId);
+    // Login: racial skills/spells removed, every player language learned.
+    void ApplyNeutralSpells(Player* player);
 }
 
 // The client packets (all little-endian, fixed layouts).

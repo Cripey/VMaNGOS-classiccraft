@@ -659,6 +659,15 @@ void Unit::DoKillUnit(Unit* pVictim)
     DealDamage(pVictim, pVictim->GetHealth(), nullptr, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, nullptr, false);
 }
 
+// classiccraft (fork only): a neutral Minecraft character counts as every playable race (both
+// factions' quests, items, gossip); ClassicCraftNeutral.cpp.
+uint32 Unit::GetRaceMask() const
+{
+    if (ClassicCraft::IsNeutral(this))
+        return RACEMASK_ALL_PLAYABLE;
+    return GetRace() ? 1 << (GetRace()-1) : 0x0;
+}
+
 uint32 Unit::DealDamage(Unit* pVictim, uint32 damage, CleanDamage const* cleanDamage, DamageEffectType damagetype, SpellSchoolMask damageSchoolMask, SpellEntry const* spellProto, bool durabilityLoss, Spell* spell, bool reflected)
 {
     // World of Warcraft Client Patch 1.7.0 (2005-09-13)

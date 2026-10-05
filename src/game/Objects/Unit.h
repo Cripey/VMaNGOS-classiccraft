@@ -509,7 +509,7 @@ class Unit : public SpellCaster
         uint32 GetLevel() const final { return GetUInt32Value(UNIT_FIELD_LEVEL); }
         void SetLevel(uint32 lvl);
         uint8 GetRace() const { return GetByteValue(UNIT_FIELD_BYTES_0, UNIT_BYTES_0_OFFSET_RACE); }
-        uint32 GetRaceMask() const { return GetRace() ? 1 << (GetRace()-1) : 0x0; }
+        uint32 GetRaceMask() const; // classiccraft (fork only): out of line, the neutral race
         uint8 GetClass() const { return GetByteValue(UNIT_FIELD_BYTES_0, UNIT_BYTES_0_OFFSET_CLASS); }
         uint32 GetClassMask() const { return GetClass() ? 1 << (GetClass()-1) : 0x0; }
         uint8 GetGender() const final { return GetByteValue(UNIT_FIELD_BYTES_0, UNIT_BYTES_0_OFFSET_GENDER); }

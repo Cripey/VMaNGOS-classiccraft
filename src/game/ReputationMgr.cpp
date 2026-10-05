@@ -20,6 +20,7 @@
  */
 
 #include "ReputationMgr.h"
+#include "ClassicCraft.h" // classiccraft (fork only)
 #include "Player.h"
 #include "Opcodes.h"
 #include "ObjectMgr.h"
@@ -67,7 +68,10 @@ int32 ReputationMgr::GetBaseReputation(FactionEntry const* factionEntry) const
     uint32 raceMask = m_player->GetRaceMask();
     uint32 classMask = m_player->GetClassMask();
 
-    int idx = factionEntry->GetIndexFitTo(raceMask, classMask);
+    // classiccraft (fork only): the neutral Minecraft race takes each faction's best slot.
+    int idx = ClassicCraft::IsNeutral(m_player)
+        ? ClassicCraft::NeutralRepIndex(factionEntry, classMask)
+        : factionEntry->GetIndexFitTo(raceMask, classMask);
 
     return idx >= 0 ? factionEntry->BaseRepValue[idx] : 0;
 }
@@ -111,6 +115,13 @@ uint32 ReputationMgr::GetDefaultStateFlags(FactionEntry const* factionEntry) con
 
     uint32 raceMask = m_player->GetRaceMask();
     uint32 classMask = m_player->GetClassMask();
+
+    // classiccraft (fork only): the neutral Minecraft race takes each faction's best slot, never at war.
+    if (ClassicCraft::IsNeutral(m_player))
+    {
+        int idx = ClassicCraft::NeutralRepIndex(factionEntry, classMask);
+        return idx >= 0 ? (factionEntry->ReputationFlags[idx] & ~FACTION_FLAG_AT_WAR) : 0;
+    }
 
     int idx = factionEntry->GetIndexFitTo(raceMask, classMask);
 
