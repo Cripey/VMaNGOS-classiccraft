@@ -1,3 +1,10 @@
+> **This is VMaNGOS-classiccraft, a modified fork of [VMaNGOS](https://github.com/vmangos/core)**
+> for [classiccraft](https://github.com/Cripey/classiccraft) (a real Minecraft client bridged into
+> World of Warcraft 1.12.1). Changes from upstream: `src/game/ClassicCraft.h`,
+> `src/game/Handlers/ClassicCraftHandler.cpp`, `sql/custom/classiccraft_*.sql` and hooks marked
+> `classiccraft` in other files; see the git history for every change and its date. Licensed like
+> upstream under the GNU GPL version 2 (`LICENSE`). The rest of this README is upstream's.
+
 [![CI Build](https://github.com/vmangos/core/actions/workflows/ci-build.yaml/badge.svg)](https://github.com/vmangos/core/actions/workflows/ci-build.yaml)
 
 
